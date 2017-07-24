@@ -1,0 +1,145 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: pttg-ip-hmrc-access-code
+  labels:
+    version: {{.VERSION}}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: pttg-ip-hmrc-access-code
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 2
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: pttg-ip-hmrc-access-code
+        version: {{.VERSION}}
+    spec:
+      imagePullSecrets:
+      - name: registrykey
+      containers:
+      - name: vault-sidekick
+        image: quay.io/ukhomeofficedigital/vault-sidekick:v0.2.0
+        imagePullPolicy: Always
+        resources:
+         limits:
+          memory: "100Mi"
+          cpu: 100m
+         requests:
+          memory: "50Mi"
+          cpu: 100m
+        args:
+          - -output=/etc/nginx/secrets
+          - -tls-skip-verify=true
+          - -cn=pki:services/${NAMESPACE}/pki/issue/default:common_name=pttg-ip-hmrc-access-code.${NAMESPACE}.svc.cluster.local,file=/etc/nginx/secrets/pttg-ip-hmrc-access-code,fmt=bundle
+        env:
+          - name: VAULT_ADDR
+            value: "https://vault.vault.svc.cluster.local:8200"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: VAULT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: store-token
+                key: token
+        volumeMounts:
+          - mountPath: /etc/nginx/secrets
+            name: secrets
+      - name: proxy
+        image: quay.io/ukhomeofficedigital/nginx-proxy:v1.5.1
+        imagePullPolicy: Always
+        resources:
+         limits:
+          memory: "100Mi"
+          cpu: 100m
+         requests:
+          memory: "50Mi"
+          cpu: 100m
+        env:
+          - name: PROXY_SERVICE_HOST
+            value: '127.0.0.1'
+          - name: PROXY_SERVICE_PORT
+            value: '8080'
+          - name: NAXSI_USE_DEFAULT_RULES
+            value: 'FALSE'
+          - name: ENABLE_UUID_PARAM
+            value: 'FALSE'
+          - name: HTTPS_REDIRECT
+            value: 'FALSE'
+          - name: SERVER_CERT
+            value: /etc/nginx/secrets/pttg-ip-hmrc-access-code-bundle.pem
+          - name: SERVER_KEY
+            value: /etc/nginx/secrets/pttg-ip-hmrc-access-code-key.pem
+        volumeMounts:
+          - name: secrets
+            mountPath: /etc/nginx/secrets
+            readOnly: true
+        ports:
+          - name: https
+            containerPort: 443
+          - name: http
+            containerPort: 80
+      - name: pttg-ip-hmrc-access-code
+        image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
+        env:
+          - name: JAVA_OPTS
+            value: "-Xms150m -Xmx250m"
+          - name: SERVER_PORT
+            value: '8080'
+          - name: BASE_HMRC_URL
+            valueFrom:
+              configMapKeyRef:
+                name: endpoint-config
+                key: BASE_HMRC_URL
+          - name: CLIENT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: hmrc-config
+                key: CLIENT_ID
+          - name: TOTP_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: hmrc-config
+                key: TOTP_KEY
+        resources:
+          limits:
+            cpu: 300m
+            memory: 1024Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        ports:
+          - name: http
+            containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+            httpHeaders:
+              - name: X-probe
+                value: kubelet
+          initialDelaySeconds: 240
+          periodSeconds: 20
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+            httpHeaders:
+              - name: X-probe
+                value: kubelet
+          periodSeconds: 20
+          timeoutSeconds: 5
+        imagePullPolicy: Always
+      volumes:
+      - name: secrets
+        emptyDir:
+          medium: "Memory"
