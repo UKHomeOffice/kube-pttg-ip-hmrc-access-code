@@ -101,12 +101,12 @@ spec:
                 key: BASE_HMRC_URL
           - name: CLIENT_ID
             valueFrom:
-              configMapKeyRef:
+              secretKeyRef:
                 name: hmrc-config
                 key: CLIENT_ID
           - name: TOTP_KEY
             valueFrom:
-              configMapKeyRef:
+              secretKeyRef:
                 name: hmrc-config
                 key: TOTP_KEY
         resources:
