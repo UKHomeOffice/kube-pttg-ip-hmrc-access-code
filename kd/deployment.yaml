@@ -102,12 +102,12 @@ spec:
           - name: CLIENT_ID
             valueFrom:
               secretKeyRef:
-                name: hmrc-config
+                name: hmrc-secrets
                 key: CLIENT_ID
           - name: TOTP_KEY
             valueFrom:
               secretKeyRef:
-                name: hmrc-config
+                name: hmrc-secrets
                 key: TOTP_KEY
         resources:
           limits:
