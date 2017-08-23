@@ -94,6 +94,8 @@ spec:
             value: "-Xms150m -Xmx250m"
           - name: SERVER_PORT
             value: '8080'
+          - name: ENDPOINTS_INFO_ENABLED
+            value: 'false'
           - name: BASE_HMRC_URL
             valueFrom:
               configMapKeyRef:
