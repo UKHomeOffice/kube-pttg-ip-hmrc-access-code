@@ -113,11 +113,11 @@ spec:
                 key: TOTP_KEY
         resources:
           limits:
-            cpu: 300m
-            memory: 1024Mi
+            cpu: 1600m
+            memory: 612Mi
           requests:
-            cpu: 200m
-            memory: 512Mi
+            cpu: 100m
+            memory: 484Mi
         ports:
           - name: http
             containerPort: 8080
