@@ -27,6 +27,11 @@ spec:
       - name: vault-sidekick
         image: quay.io/ukhomeofficedigital/vault-sidekick:v0.2.0
         imagePullPolicy: Always
+        securityContext:
+           capabilities:
+             drop:
+               - SETUID
+               - SETGID
         resources:
          limits:
           memory: "100Mi"
@@ -56,6 +61,11 @@ spec:
       - name: proxy
         image: quay.io/ukhomeofficedigital/pttg-nginx-proxy:v3.1.3a
         imagePullPolicy: Always
+        securityContext:
+           capabilities:
+             drop:
+               - SETUID
+               - SETGID
         resources:
          limits:
           memory: "100Mi"
@@ -89,6 +99,11 @@ spec:
             containerPort: 10443
       - name: pttg-ip-hmrc-access-code
         image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
+        securityContext:
+           capabilities:
+             drop:
+               - SETUID
+               - SETGID
         env:
           - name: JAVA_OPTS
             value: "-Xms150m -Xmx250m"
