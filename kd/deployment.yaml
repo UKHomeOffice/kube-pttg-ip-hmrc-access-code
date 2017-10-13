@@ -18,6 +18,7 @@ spec:
   template:
     metadata:
       labels:
+        sys: ip
         name: pttg-ip-hmrc-access-code
         version: {{.VERSION}}
     spec:
