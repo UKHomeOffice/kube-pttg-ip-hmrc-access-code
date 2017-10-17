@@ -127,6 +127,11 @@ spec:
               secretKeyRef:
                 name: hmrc-secrets
                 key: TOTP_KEY
+          - name: REFRESH_INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: endpoint-config
+                key: HMRC_ACCESS_CODE_REFRESH_INTERVAL
         resources:
           limits:
             cpu: 1600m
