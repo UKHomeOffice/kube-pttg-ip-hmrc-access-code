@@ -21,6 +21,58 @@ spec:
         sys: ip
         name: pttg-ip-hmrc-access-code
         version: {{.VERSION}}
+      annotations:
+        pod.beta.kubernetes.io/init-containers: '
+[
+   {
+      "name": "vaultjks",
+      "image": "quay.io/ukhomeofficedigital/vaultjks:v0.1.0",
+      "imagePullPolicy": "Always",
+      "env": [
+         {
+            "name": "VAULT_ADDR",
+            "value": "https://vault.vault.svc.cluster.local:8200"
+         },
+         {
+            "name": "VAULT_TOKEN",
+            "valueFrom": {
+               "secretKeyRef": {
+                  "name": "store-token",
+                  "key": "token"
+               }
+            }
+         },
+         {
+            "name": "VAULT_PKI_PATH",
+            "value": "services/pt-i-{{.ENVIRONMENT}}/pki"
+         },
+         {
+            "name": "VAULT_ROLE_NAME",
+            "value": "default"
+         },
+         {
+            "name": "SLEEP_FOREVER",
+            "value": "false"
+         },
+         {
+            "name": "IP_SAN",
+            "valueFrom": {
+               "fieldRef": {
+                  "apiVersion": "v1",
+                  "fieldPath": "status.podIP"
+               }
+            }
+         }
+      ],
+      "volumeMounts": [
+         {
+            "mountPath": "/data",
+            "name": "javapki"
+         }
+      ]
+   }
+]
+        '
     spec:
       imagePullSecrets:
       - name: registrykey
@@ -112,7 +164,7 @@ spec:
                - SETGID
         env:
           - name: JAVA_OPTS
-            value: "-Xms150m -Xmx250m"
+            value: "-Xms150m -Xmx250m -Djavax.net.ssl.trustStore=/data/truststore.jks"
           - name: SERVER_PORT
             value: '8080'
           - name: ENDPOINTS_INFO_ENABLED
@@ -206,8 +258,15 @@ spec:
           periodSeconds: 20
           timeoutSeconds: 5
         imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /data
+            name: javapki
+            readOnly: true
       volumes:
       - name: secrets
+        emptyDir:
+          medium: "Memory"
+      - name: javapki
         emptyDir:
           medium: "Memory"
       - name: service-secrets
