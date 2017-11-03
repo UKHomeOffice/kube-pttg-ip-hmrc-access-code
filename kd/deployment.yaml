@@ -169,6 +169,13 @@ spec:
               secretKeyRef:
                 name: db-secrets
                 key: hmrc_ac_password
+          - name: AUDIT_SERVICE_AUTH
+            valueFrom:
+              secretKeyRef:
+                name: pttg-audit-service-secrets
+                key: pttg_ip_hmrc_access
+          - name: PTTG_AUDIT_URL
+            value: 'https://pttg-ip-audit.pt-i-{{.ENVIRONMENT}}.svc.cluster.local'
         resources:
           limits:
             cpu: 1600m
