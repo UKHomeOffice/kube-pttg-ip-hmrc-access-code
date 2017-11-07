@@ -169,6 +169,8 @@ spec:
             value: '8080'
           - name: ENDPOINTS_INFO_ENABLED
             value: 'false'
+          - name: SPRING_PROFILES_ACTIVE
+            value: 'postgres'
           - name: BASE_HMRC_URL
             valueFrom:
               configMapKeyRef:
@@ -184,13 +186,36 @@ spec:
               secretKeyRef:
                 name: hmrc-secrets
                 key: TOTP_KEY
+          - name: AUDIT_SERVICE_AUTH
+            valueFrom:
+              secretKeyRef:
+                name: pttg-audit-service-secrets
+                key: pttg_ip_hmrc_access
+          - name: PTTG_AUDIT_URL
+            value: 'https://pttg-ip-audit.pt-i-{{.ENVIRONMENT}}.svc.cluster.local'
+          - name: AUDITING_DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: AUDITING_DEPLOYMENT_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: AUDIT_SERVICE_RETRY_ATTEMPTS
+            valueFrom:
+              configMapKeyRef:
+                name: rest-retry-config
+                key: AUDIT_SERVICE_RETRY_ATTEMPTS
+          - name: AUDIT_SERVICE_RETRY_DELAY
+            valueFrom:
+              configMapKeyRef:
+                name: rest-retry-config
+                key: AUDIT_SERVICE_RETRY_DELAY
           - name: REFRESH_INTERVAL
             valueFrom:
               configMapKeyRef:
                 name: endpoint-config
                 key: HMRC_ACCESS_CODE_REFRESH_INTERVAL
-          - name: SPRING_PROFILES_ACTIVE
-            value: 'postgres'
           - name: PTTG_DB_HOSTNAME
             valueFrom:
               secretKeyRef:
@@ -221,13 +246,6 @@ spec:
               secretKeyRef:
                 name: db-secrets
                 key: hmrc_ac_password
-          - name: AUDIT_SERVICE_AUTH
-            valueFrom:
-              secretKeyRef:
-                name: pttg-audit-service-secrets
-                key: pttg_ip_hmrc_access
-          - name: PTTG_AUDIT_URL
-            value: 'https://pttg-ip-audit.pt-i-{{.ENVIRONMENT}}.svc.cluster.local'
         resources:
           limits:
             cpu: 1600m
