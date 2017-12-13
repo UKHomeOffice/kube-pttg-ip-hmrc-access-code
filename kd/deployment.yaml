@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       labels:
-        sys: ip
+        sys: ip,rps
         name: pttg-ip-hmrc-access-code
         version: {{.VERSION}}
       annotations:
@@ -171,6 +171,8 @@ spec:
             value: 'false'
           - name: SPRING_PROFILES_ACTIVE
             value: 'postgres'
+          - name: LOG_METRICS
+            value: 'false'
           - name: BASE_HMRC_URL
             valueFrom:
               configMapKeyRef:
