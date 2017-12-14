@@ -79,7 +79,7 @@ spec:
       - name: registrykey
       containers:
       - name: vault-sidekick
-        image: quay.io/ukhomeofficedigital/vault-sidekick:v0.2.0
+        image: quay.io/ukhomeofficedigital/vault-sidekick:v0.3.3
         imagePullPolicy: Always
         securityContext:
            capabilities:
