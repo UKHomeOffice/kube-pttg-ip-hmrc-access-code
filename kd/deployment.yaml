@@ -96,7 +96,7 @@ spec:
         args:
           - -output=/etc/nginx/secrets
           - -tls-skip-verify=true
-          - -cn=pki:services/${NAMESPACE}/pki/issue/default:common_name=pttg-ip-hmrc-access-code.${NAMESPACE}.svc.cluster.local,file=/etc/nginx/secrets/pttg-ip-hmrc-access-code,fmt=bundle,update=120s,exec=/usr/local/scripts/trigger_nginx_reload.sh,exec-timeout=5s
+          - -cn=pki:services/${NAMESPACE}/pki/issue/default:common_name=pttg-ip-hmrc-access-code.${NAMESPACE}.svc.cluster.local,file=/etc/nginx/secrets/pttg-ip-hmrc-access-code,fmt=bundle,exec=/usr/local/scripts/trigger_nginx_reload.sh,exec-timeout=10s
         env:
           - name: VAULT_ADDR
             value: "https://vault.vault.svc.cluster.local:8200"
@@ -143,7 +143,7 @@ spec:
           - name: SERVER_KEY
             value: /etc/nginx/secrets/pttg-ip-hmrc-access-code-key.pem
           - name: ADD_NGINX_SERVER_CFG
-            value: 'gzip off; location = /reload { allow 127.0.0.1; deny all; content_by_lua_block { os.execute("/usr/bin/touch /tmp/before_reload; /usr/local/openresty/nginx/sbin/nginx -s reload; /usr/bin/touch /tmp/after_reload;") } }'
+            value: 'gzip off; location = /reload { allow 127.0.0.1; deny all; content_by_lua_block { os.execute("/usr/local/openresty/nginx/sbin/nginx -s reload;") } }'
           - name: BASIC_AUTH
             value: /etc/nginx/service-secrets/.htpasswd_1
         volumeMounts:
