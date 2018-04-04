@@ -1,13 +1,33 @@
-#!/usr/bin/env bash
-export KUBE_NAMESPACE=${KUBE_NAMESPACE:-${DRONE_DEPLOY_TO}}
+#!/bin/bash
 
-if [ $ENVIRONMENT == "prod" ]
-then
-    export KUBE_TOKEN=${PROD_KUBE_TOKEN}
+export KUBE_NAMESPACE=${KUBE_NAMESPACE}
+export KUBE_SERVER=${KUBE_SERVER}
+
+if [[ -z ${VERSION} ]] ; then
+    export VERSION=${IMAGE_VERSION}
+fi
+
+if [[ ${ENVIRONMENT} == "pr" ]] ; then
+    echo "deploy ${VERSION} to pr namespace, using PTTG_IP_PR drone secret"
+    export KUBE_TOKEN=${PTTG_IP_PR}
+else
+    if [[ ${ENVIRONMENT} == "test" ]] ; then
+        echo "deploy ${VERSION} to test namespace, using PTTG_IP_TEST drone secret"
+        export KUBE_TOKEN=${PTTG_IP_TEST}
+    else
+        echo "deploy ${VERSION} to dev namespace, using PTTG_IP_DEV drone secret"
+        export KUBE_TOKEN=${PTTG_IP_DEV}
+    fi
+fi
+
+if [[ -z ${KUBE_TOKEN} ]] ; then
+    echo "Failed to find a value for KUBE_TOKEN - exiting"
+    exit -1
 fi
 
 cd kd
+
 kd --insecure-skip-tls-verify \
-   --file deployment.yaml \
-   --file service.yaml \
-   --retries 50
+    -f networkPolicy.yaml \
+    -f deployment.yaml \
+    -f service.yaml

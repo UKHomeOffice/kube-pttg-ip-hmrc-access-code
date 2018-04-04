@@ -18,272 +18,266 @@ spec:
   template:
     metadata:
       labels:
-        sys: ip
-        sys: rps
         name: pttg-ip-hmrc-access-code
         version: {{.VERSION}}
-      annotations:
-        pod.beta.kubernetes.io/init-containers: '
-[
-   {
-      "name": "vaultjks",
-      "image": "quay.io/ukhomeofficedigital/vaultjks:v0.1.0",
-      "imagePullPolicy": "Always",
-      "env": [
-         {
-            "name": "VAULT_ADDR",
-            "value": "https://vault.vault.svc.cluster.local:8200"
-         },
-         {
-            "name": "VAULT_TOKEN",
-            "valueFrom": {
-               "secretKeyRef": {
-                  "name": "store-token",
-                  "key": "token"
-               }
-            }
-         },
-         {
-            "name": "VAULT_PKI_PATH",
-            "value": "services/pt-i-{{.ENVIRONMENT}}/pki"
-         },
-         {
-            "name": "VAULT_ROLE_NAME",
-            "value": "default"
-         },
-         {
-            "name": "SLEEP_FOREVER",
-            "value": "false"
-         },
-         {
-            "name": "IP_SAN",
-            "valueFrom": {
-               "fieldRef": {
-                  "apiVersion": "v1",
-                  "fieldPath": "status.podIP"
-               }
-            }
-         }
-      ],
-      "volumeMounts": [
-         {
-            "mountPath": "/data",
-            "name": "javapki"
-         }
-      ]
-   }
-]
-        '
     spec:
       imagePullSecrets:
-      - name: registrykey
+        - name: registrykey
+      initContainers:
+        
+        - name: get-ca-certs
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick:v0.0.2
+          securityContext:
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - SETUID
+                - SETGID
+          args:
+            - --certs=/certs
+            - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
+            - --onetime=true
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+            - name: bundle
+              mountPath: /etc/ssl/certs
+              readOnly: true
+        
+        - name: create-truststore
+          image: quay.io/ukhomeofficedigital/pttg-docker-openjdk8:latest
+          securityContext:
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - SETUID
+                - SETGID
+          volumeMounts:
+            - name: store
+              mountPath: /store
+            - name: bundle
+              mountPath: /etc/ssl/certs
+              readOnly: true
+          command: ["/bin/sh"]
+          args: ["-c", "keytool -import -alias servercert -file /etc/ssl/certs/ca-bundle.crt -keystore /store/truststore.jks -noprompt -storepass changeit"]
+      
       containers:
-      - name: vault-sidekick
-        image: quay.io/ukhomeofficedigital/pttg-vault-sidekick:build-31
-        imagePullPolicy: Always
-        securityContext:
-           capabilities:
-             drop:
-               - SETUID
-               - SETGID
-        resources:
-         limits:
-          memory: "100Mi"
-          cpu: 100m
-         requests:
-          memory: "50Mi"
-          cpu: 100m
-        args:
-          - -output=/etc/nginx/secrets
-          - -tls-skip-verify=true
-          - -cn=pki:services/${NAMESPACE}/pki/issue/default:common_name=pttg-ip-hmrc-access-code.${NAMESPACE}.svc.cluster.local,file=/etc/nginx/secrets/pttg-ip-hmrc-access-code,fmt=bundle,exec=/usr/local/scripts/trigger_nginx_reload.sh,exec-timeout=10s
-        env:
-          - name: VAULT_ADDR
-            value: "https://vault.vault.svc.cluster.local:8200"
-          - name: NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: VAULT_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: store-token
-                key: token
-        volumeMounts:
-          - mountPath: /etc/nginx/secrets
-            name: secrets
-      - name: proxy
-        image: quay.io/ukhomeofficedigital/nginx-proxy:v3.2.6
-        imagePullPolicy: Always
-        securityContext:
-           capabilities:
-             drop:
-               - SETUID
-               - SETGID
-        resources:
-         limits:
-          memory: "100Mi"
-          cpu: 100m
-         requests:
-          memory: "50Mi"
-          cpu: 100m
-        env:
-          - name: PROXY_SERVICE_HOST
-            value: '127.0.0.1'
-          - name: PROXY_SERVICE_PORT
-            value: '8080'
-          - name: NAXSI_USE_DEFAULT_RULES
-            value: 'FALSE'
-          - name: ENABLE_UUID_PARAM
-            value: 'FALSE'
-          - name: HTTPS_REDIRECT
-            value: 'FALSE'
-          - name: SERVER_CERT
-            value: /etc/nginx/secrets/pttg-ip-hmrc-access-code-bundle.pem
-          - name: SERVER_KEY
-            value: /etc/nginx/secrets/pttg-ip-hmrc-access-code-key.pem
-          - name: ADD_NGINX_SERVER_CFG
-            value: 'gzip off; location = /reload { allow 127.0.0.1; deny all; content_by_lua_block { os.execute("/usr/local/openresty/nginx/sbin/nginx -s reload;") } }'
-          - name: BASIC_AUTH
-            value: /etc/nginx/service-secrets/.htpasswd_1
-        volumeMounts:
-          - name: secrets
-            mountPath: /etc/nginx/secrets
-            readOnly: true
-          - name: service-secrets
-            mountPath: /etc/nginx/service-secrets
-            readOnly: true
-        ports:
-          - name: https
-            containerPort: 10443
-      - name: pttg-ip-hmrc-access-code
-        image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
-        securityContext:
-           capabilities:
-             drop:
-               - SETUID
-               - SETGID
-        env:
-          - name: JAVA_OPTS
-            value: "-Xms150m -Xmx250m -Djavax.net.ssl.trustStore=/data/truststore.jks"
-          - name: SERVER_PORT
-            value: '8080'
-          - name: ENDPOINTS_INFO_ENABLED
-            value: 'false'
-          - name: SPRING_PROFILES_ACTIVE
-            value: 'postgres'
-          - name: LOG_METRICS
-            value: 'false'
-          - name: BASE_HMRC_URL
-            valueFrom:
-              configMapKeyRef:
-                name: endpoint-config
-                key: BASE_HMRC_URL
-          - name: CLIENT_ID
-            valueFrom:
-              secretKeyRef:
-                name: hmrc-secrets
-                key: CLIENT_ID
-          - name: TOTP_KEY
-            valueFrom:
-              secretKeyRef:
-                name: hmrc-secrets
-                key: TOTP_KEY
-          - name: AUDIT_SERVICE_AUTH
-            valueFrom:
-              secretKeyRef:
-                name: pttg-audit-service-secrets
-                key: pttg_ip_hmrc_access
-          - name: PTTG_AUDIT_URL
-            value: 'https://pttg-ip-audit.pt-i-{{.ENVIRONMENT}}.svc.cluster.local'
-          - name: AUDITING_DEPLOYMENT_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: AUDITING_DEPLOYMENT_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: AUDIT_SERVICE_RETRY_ATTEMPTS
-            valueFrom:
-              configMapKeyRef:
-                name: rest-retry-config
-                key: AUDIT_SERVICE_RETRY_ATTEMPTS
-          - name: AUDIT_SERVICE_RETRY_DELAY
-            valueFrom:
-              configMapKeyRef:
-                name: rest-retry-config
-                key: AUDIT_SERVICE_RETRY_DELAY
-          - name: REFRESH_INTERVAL
-            valueFrom:
-              configMapKeyRef:
-                name: endpoint-config
-                key: HMRC_ACCESS_CODE_REFRESH_INTERVAL
-          - name: PTTG_DB_HOSTNAME
-            valueFrom:
-              secretKeyRef:
-                name: pttg-rds-access
-                key: endpoint
-          - name: PTTG_DB_PORT
-            valueFrom:
-              secretKeyRef:
-                name: pttg-rds-access
-                key: port
-          - name: HMRC_AC_DB_NAME
-            valueFrom:
-              secretKeyRef:
-                name: db-secrets
-                key: hmrc_ac_database
-          - name: HMRC_AC_DB_SCHEMA_NAME
-            valueFrom:
-              secretKeyRef:
-                name: db-secrets
-                key: hmrc_ac_schema_name
-          - name: HMRC_AC_DB_USERNAME
-            valueFrom:
-              secretKeyRef:
-                name: db-secrets
-                key: hmrc_ac_username
-          - name: HMRC_AC_DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: db-secrets
-                key: hmrc_ac_password
-        resources:
-          limits:
-            cpu: 1600m
-            memory: 612Mi
-          requests:
-            cpu: 100m
-            memory: 484Mi
-        ports:
-          - name: http
-            containerPort: 8080
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: http
-            httpHeaders:
-              - name: X-probe
-                value: kubelet
-          initialDelaySeconds: 240
-          periodSeconds: 20
-          timeoutSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            port: http
-            httpHeaders:
-              - name: X-probe
-                value: kubelet
-          periodSeconds: 20
-          timeoutSeconds: 5
-        imagePullPolicy: Always
-        volumeMounts:
-          - mountPath: /data
-            name: javapki
-            readOnly: true
-      volumes:
+        - name: certs
+          image: quay.io/ukhomeofficedigital/pttg-cfssl-sidekick:build-6
+          securityContext:
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - SETUID
+                - SETGID
+          args:
+            - --certs=/certs
+            - --domain=pttg-ip-api.${KUBE_NAMESPACE}.svc.cluster.local
+            - --expiry=8760h
+            - --command=/usr/local/scripts/trigger_nginx_reload.sh
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+            - name: bundle
+              mountPath: /etc/ssl/certs
+              readOnly: true
+  
+        - name: proxy
+          image: quay.io/ukhomeofficedigital/nginx-proxy:v3.2.6
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - SETUID
+                - SETGID
+          resources:
+            limits:
+              memory: "100Mi"
+              cpu: 100m
+            requests:
+              memory: "50Mi"
+              cpu: 100m
+          env:
+            - name: PROXY_SERVICE_HOST
+              value: '127.0.0.1'
+            - name: PROXY_SERVICE_PORT
+              value: '8080'
+            - name: NAXSI_USE_DEFAULT_RULES
+              value: 'FALSE'
+            - name: ENABLE_UUID_PARAM
+              value: 'FALSE'
+            - name: HTTPS_REDIRECT
+              value: 'FALSE'
+            - name: BASIC_AUTH
+              value: /etc/nginx/service-secrets/.htpasswd_1
+            - name: SERVER_CERT
+              value: /certs/tls.pem
+            - name: SERVER_KEY
+              value: /certs/tls-key.pem
+            - name: ADD_NGINX_SERVER_CFG
+              value: 'gzip off; location = /reload { allow 127.0.0.1; deny all; content_by_lua_block { os.execute("touch /tmp/nginx-reload-triggered; /usr/local/openresty/nginx/sbin/nginx -s reload; touch /tmp/nginx-reload-complete;") } }'
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/nginx/secrets
+              readOnly: true
+            - name: service-secrets
+              mountPath: /etc/nginx/service-secrets
+              readOnly: true
+          ports:
+            - name: https
+              containerPort: 10443
+
+        - name: pttg-ip-hmrc-access-code
+          image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
+          securityContext:
+             capabilities:
+               drop:
+                 - SETUID
+                 - SETGID
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms150m -Xmx250m -Djavax.net.ssl.trustStore=/store/truststore.jks"
+            - name: SERVER_PORT
+              value: '8080'
+            - name: ENDPOINTS_INFO_ENABLED
+              value: 'false'
+            - name: SPRING_PROFILES_ACTIVE
+              value: 'postgres'
+            - name: LOG_METRICS
+              value: 'false'
+            - name: BASE_HMRC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: endpoint-config
+                  key: BASE_HMRC_URL
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: hmrc-secrets
+                  key: CLIENT_ID
+            - name: TOTP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hmrc-secrets
+                  key: TOTP_KEY
+            - name: AUDIT_SERVICE_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: pttg-audit-service-secrets
+                  key: pttg_ip_hmrc_access
+            - name: PTTG_AUDIT_URL
+              value: 'https://pttg-ip-audit.pt-i-{{.ENVIRONMENT}}.svc.cluster.local'
+            - name: AUDITING_DEPLOYMENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AUDITING_DEPLOYMENT_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: AUDIT_SERVICE_RETRY_ATTEMPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: rest-retry-config
+                  key: AUDIT_SERVICE_RETRY_ATTEMPTS
+            - name: AUDIT_SERVICE_RETRY_DELAY
+              valueFrom:
+                configMapKeyRef:
+                  name: rest-retry-config
+                  key: AUDIT_SERVICE_RETRY_DELAY
+            - name: REFRESH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: endpoint-config
+                  key: HMRC_ACCESS_CODE_REFRESH_INTERVAL
+            - name: PTTG_DB_HOSTNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pttg-rds-access
+                  key: endpoint
+            - name: PTTG_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: pttg-rds-access
+                  key: port
+            - name: HMRC_AC_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: hmrc_ac_database
+            - name: HMRC_AC_DB_SCHEMA_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: hmrc_ac_schema_name
+            - name: HMRC_AC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: hmrc_ac_username
+            - name: HMRC_AC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: hmrc_ac_password
+          resources:
+            limits:
+              cpu: 1600m
+              memory: 612Mi
+            requests:
+              cpu: 100m
+              memory: 484Mi
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: X-probe
+                  value: kubelet
+            initialDelaySeconds: 240
+            periodSeconds: 20
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: X-probe
+                  value: kubelet
+            periodSeconds: 20
+            timeoutSeconds: 5
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /data
+              name: javapki
+              readOnly: true
+    volumes:
+      - name: store
+        emptyDir:
+          medium: "Memory"
+      - name: certs
+        emptyDir:
+          medium: "Memory"
+      - name: bundle
+        configMap:
+          name: bundle
       - name: secrets
         emptyDir:
           medium: "Memory"
