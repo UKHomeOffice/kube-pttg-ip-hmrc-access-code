@@ -144,7 +144,8 @@ spec:
         - name: pttg-ip-hmrc-access-code
           image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
           securityContext:
-             capabilities:
+            runAsNonRoot: true
+            capabilities:
                drop:
                  - SETUID
                  - SETGID
