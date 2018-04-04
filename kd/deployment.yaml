@@ -268,22 +268,22 @@ spec:
             - mountPath: /data
               name: javapki
               readOnly: true
-    volumes:
-      - name: store
-        emptyDir:
-          medium: "Memory"
-      - name: certs
-        emptyDir:
-          medium: "Memory"
-      - name: bundle
-        configMap:
-          name: bundle
-      - name: secrets
-        emptyDir:
-          medium: "Memory"
-      - name: javapki
-        emptyDir:
-          medium: "Memory"
-      - name: service-secrets
-        secret:
-          secretName: pttg-hmrc-access-service-secrets
+      volumes:
+        - name: store
+          emptyDir:
+            medium: "Memory"
+        - name: certs
+          emptyDir:
+            medium: "Memory"
+        - name: bundle
+          configMap:
+            name: bundle
+        - name: secrets
+          emptyDir:
+            medium: "Memory"
+        - name: javapki
+          emptyDir:
+            medium: "Memory"
+        - name: service-secrets
+          secret:
+            secretName: pttg-hmrc-access-service-secrets
