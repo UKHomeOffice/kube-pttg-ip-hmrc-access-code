@@ -208,12 +208,12 @@ spec:
             - name: PTTG_DB_HOSTNAME
               valueFrom:
                 secretKeyRef:
-                  name: pttg-rds-access
+                  name: pttg-ip-dev-rds
                   key: endpoint
             - name: PTTG_DB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: pttg-rds-access
+                  name: pttg-ip-dev-rds
                   key: port
             - name: HMRC_AC_DB_NAME
               valueFrom:
