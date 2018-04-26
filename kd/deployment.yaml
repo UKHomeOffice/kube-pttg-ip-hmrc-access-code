@@ -23,36 +23,36 @@ spec:
     spec:
       imagePullSecrets:
         - name: registrykey
-       initContainers:
-         - name: truststore
-           image: quay.io/ukhomeofficedigital/cfssl-sidekick-jks:latest
-           securityContext:
-             runAsNonRoot: true
-             capabilities:
-               drop:
-                 - SETUID
-                 - SETGID
-           args:
-             - --certs=/certs
-             - --command=/usr/bin/create-keystore.sh /certs/tls.pem /certs/tls-key.pem /etc/ssl/certs/acp-root.crt
-             - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
-             - --domain=localhost
-             - --onetime=true
-           env:
-           - name: KUBE_NAMESPACE
-             valueFrom:
-               fieldRef:
-                 fieldPath: metadata.namespace
-           - name: DEBUG
-             value: 'TRUE'
-           volumeMounts:
-           - name: certs
-             mountPath: /certs
-           - name: keystore
-             mountPath: /etc/keystore
-           - name: bundle
-             mountPath: /etc/ssl/certs
-             readOnly: true
+      initContainers:
+        - name: truststore
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick-jks:latest
+          securityContext:
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - SETUID
+                - SETGID
+          args:
+            - --certs=/certs
+            - --command=/usr/bin/create-keystore.sh /certs/tls.pem /certs/tls-key.pem /etc/ssl/certs/acp-root.crt
+            - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
+            - --domain=localhost
+            - --onetime=true
+          env:
+          - name: KUBE_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DEBUG
+            value: 'TRUE'
+          volumeMounts:
+          - name: certs
+            mountPath: /certs
+          - name: keystore
+            mountPath: /etc/keystore
+          - name: bundle
+            mountPath: /etc/ssl/certs
+            readOnly: true
       containers:
         - name: certs
           mage: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
