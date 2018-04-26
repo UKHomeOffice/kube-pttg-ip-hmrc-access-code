@@ -55,7 +55,7 @@ spec:
             readOnly: true
       containers:
         - name: certs
-          mage: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
           securityContext:
             runAsNonRoot: true
             capabilities:
