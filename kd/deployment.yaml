@@ -25,7 +25,7 @@ spec:
         - name: registrykey
       initContainers:
         - name: truststore
-          image: quay.io/ukhomeofficedigital/cfssl-sidekick-jks:latest
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
           securityContext:
             runAsNonRoot: true
             capabilities:
@@ -34,7 +34,6 @@ spec:
                 - SETGID
           args:
             - --certs=/certs
-            - --command=/usr/bin/create-keystore.sh /certs/tls.pem /certs/tls-key.pem /etc/ssl/certs/acp-root.crt
             - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
             - --domain=localhost
             - --onetime=true
@@ -46,8 +45,6 @@ spec:
           volumeMounts:
           - name: certs
             mountPath: /certs
-          - name: keystore
-            mountPath: /etc/keystore
           - name: bundle
             mountPath: /etc/ssl/certs
             readOnly: true
@@ -136,9 +133,7 @@ spec:
                  - SETGID
           env:
             - name: JAVA_OPTS
-              value: "-Xms150m -Xmx250m -Djavax.net.ssl.trustStore=/etc/keystore/truststore.jks"
-            - name: JDK_TRUST_FILE
-              value: '/etc/keystore/truststore.jks'
+              value: "-Xms150m -Xmx250m"
             - name: SERVER_PORT
               value: '8080'
             - name: ENDPOINTS_INFO_ENABLED
