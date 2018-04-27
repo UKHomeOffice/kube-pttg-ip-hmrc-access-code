@@ -43,8 +43,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DEBUG
-            value: 'TRUE'
           volumeMounts:
           - name: certs
             mountPath: /certs
@@ -64,7 +62,7 @@ spec:
                 - SETGID
           args:
             - --certs=/certs
-            - --domain=pttg-ip-api.${KUBE_NAMESPACE}.svc.cluster.local
+            - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
             - --expiry=8760h
             - --command=/usr/local/scripts/trigger_nginx_reload.sh
           env:
