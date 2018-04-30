@@ -25,7 +25,7 @@ spec:
         - name: registrykey
       initContainers:
         - name: truststore
-          image: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick:v0.0.6
           securityContext:
             runAsNonRoot: true
             capabilities:
@@ -50,7 +50,7 @@ spec:
             readOnly: true
       containers:
         - name: certs
-          image: quay.io/ukhomeofficedigital/cfssl-sidekick:latest
+          image: quay.io/ukhomeofficedigital/cfssl-sidekick:v0.0.6
           securityContext:
             runAsNonRoot: true
             capabilities:
