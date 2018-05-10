@@ -34,6 +34,7 @@ spec:
                 - SETGID
           args:
             - --certs=/certs
+            - --command=/usr/bin/create-keystore.sh /certs/tls.pem /certs/tls-key.pem /etc/ssl/certs/acp-root.crt
             - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
             - --domain=localhost
             - --onetime=true
@@ -45,6 +46,8 @@ spec:
           volumeMounts:
           - name: certs
             mountPath: /certs
+          - name: keystore
+            mountPath: /etc/keystore
           - name: bundle
             mountPath: /etc/ssl/certs
             readOnly: true
