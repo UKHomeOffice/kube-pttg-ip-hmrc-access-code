@@ -110,6 +110,8 @@ spec:
               value: /certs/tls.pem
             - name: SERVER_KEY
               value: /certs/tls-key.pem
+            - name: ADD_NGINX_LOCATION_CFG
+              value: 'proxy_read_timeout 99999s; proxy_connect_timeout 99999s`;'
             - name: ADD_NGINX_SERVER_CFG
               value: 'gzip off; location = /reload { allow 127.0.0.1; deny all; content_by_lua_block { os.execute("touch /tmp/nginx-reload-triggered; /usr/local/openresty/nginx/sbin/nginx -s reload; touch /tmp/nginx-reload-complete;") } }'
           volumeMounts:
@@ -220,6 +222,30 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: hmrc_ac_password
+            - name: TIMEOUTS_AUDIT_READMS
+              valueFrom:
+                configMapKeyRef:
+                  name: service-timeouts
+                  key: TIMEOUTS_AUDIT_READMS
+              optional: true
+            - name: TIMEOUTS_AUDIT_CONNECTMS
+              valueFrom:
+                configMapKeyRef:
+                  name: service-timeouts
+                  key: TIMEOUTS_AUDIT_CONNECTMS
+              optional: true
+            - name: TIMEOUTS_HMRC_READMS
+              valueFrom:
+                configMapKeyRef:
+                  name: service-timeouts
+                  key: TIMEOUTS_HMRC_READMS
+              optional: true
+            - name: TIMEOUTS_HMRC_CONNECTMS
+              valueFrom:
+                configMapKeyRef:
+                  name: service-timeouts
+                  key: TIMEOUTS_HMRC_CONNECTMS
+              optional: true
           resources:
             limits:
               cpu: 1600m
