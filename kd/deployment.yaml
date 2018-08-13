@@ -227,25 +227,25 @@ spec:
                 configMapKeyRef:
                   name: service-timeouts
                   key: TIMEOUTS_AUDIT_READMS
-              optional: true
+                  optional: true
             - name: TIMEOUTS_AUDIT_CONNECTMS
               valueFrom:
                 configMapKeyRef:
                   name: service-timeouts
                   key: TIMEOUTS_AUDIT_CONNECTMS
-              optional: true
+                  optional: true
             - name: TIMEOUTS_HMRC_READMS
               valueFrom:
                 configMapKeyRef:
                   name: service-timeouts
                   key: TIMEOUTS_HMRC_READMS
-              optional: true
+                  optional: true
             - name: TIMEOUTS_HMRC_CONNECTMS
               valueFrom:
                 configMapKeyRef:
                   name: service-timeouts
                   key: TIMEOUTS_HMRC_CONNECTMS
-              optional: true
+                  optional: true
           resources:
             limits:
               cpu: 1600m
