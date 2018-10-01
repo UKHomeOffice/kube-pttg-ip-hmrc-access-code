@@ -187,11 +187,6 @@ spec:
                 configMapKeyRef:
                   name: rest-retry-config
                   key: AUDIT_SERVICE_RETRY_DELAY
-            - name: REFRESH_INTERVAL
-              valueFrom:
-                configMapKeyRef:
-                  name: endpoint-config
-                  key: HMRC_ACCESS_CODE_REFRESH_INTERVAL
             - name: PTTG_DB_HOSTNAME
               valueFrom:
                 secretKeyRef:
