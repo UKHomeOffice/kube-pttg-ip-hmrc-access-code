@@ -76,7 +76,7 @@ spec:
             - name: bundle
               mountPath: /etc/ssl/certs
               readOnly: true
-  
+
         - name: proxy
           image: quay.io/ukhomeofficedigital/nginx-proxy:v3.2.9
           imagePullPolicy: Always
@@ -157,6 +157,11 @@ spec:
                 secretKeyRef:
                   name: hmrc-secrets
                   key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hmrc-secrets
+                  key: CLIENT_SECRET
             - name: TOTP_KEY
               valueFrom:
                 secretKeyRef:
