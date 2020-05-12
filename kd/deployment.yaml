@@ -152,6 +152,11 @@ spec:
                 configMapKeyRef:
                   name: endpoint-config
                   key: BASE_HMRC_URL
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hmrc-secrets
+                  key: CLIENT_SECRET
             - name: CLIENT_ID
               valueFrom:
                 secretKeyRef:
