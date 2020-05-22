@@ -18,6 +18,7 @@ fi
 cd kd || exit
 
 kd --insecure-skip-tls-verify \
+    -f pod-to-pod-server-certificate.yaml \
     -f networkPolicy.yaml \
     -f deployment.yaml \
     -f service.yaml
