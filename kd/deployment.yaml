@@ -23,60 +23,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: registrykey
-      initContainers:
-        - name: truststore
-          image: quay.io/ukhomeofficedigital/cfssl-sidekick-jks:v0.0.6
-          securityContext:
-            runAsNonRoot: true
-            capabilities:
-              drop:
-                - SETUID
-                - SETGID
-          args:
-            - --certs=/certs
-            - --command=/usr/bin/create-keystore.sh /certs/tls.pem /certs/tls-key.pem /etc/ssl/certs/acp-root.crt
-            - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
-            - --domain=localhost
-            - --onetime=true
-          env:
-          - name: KUBE_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          volumeMounts:
-          - name: certs
-            mountPath: /certs
-          - name: keystore
-            mountPath: /etc/keystore
-          - name: bundle
-            mountPath: /etc/ssl/certs
-            readOnly: true
       containers:
-        - name: certs
-          image: quay.io/ukhomeofficedigital/cfssl-sidekick:v0.0.6
-          securityContext:
-            runAsNonRoot: true
-            capabilities:
-              drop:
-                - SETUID
-                - SETGID
-          args:
-            - --certs=/certs
-            - --domain=pttg-ip-hmrc-access-code.${KUBE_NAMESPACE}.svc.cluster.local
-            - --expiry=8760h
-            - --command=/usr/local/scripts/trigger_nginx_reload.sh
-          env:
-            - name: KUBE_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          volumeMounts:
-            - name: certs
-              mountPath: /certs
-            - name: bundle
-              mountPath: /etc/ssl/certs
-              readOnly: true
-
         - name: proxy
           image: quay.io/ukhomeofficedigital/nginx-proxy:v3.2.9
           imagePullPolicy: Always
@@ -107,9 +54,9 @@ spec:
             - name: BASIC_AUTH
               value: /etc/nginx/service-secrets/.htpasswd_1
             - name: SERVER_CERT
-              value: /certs/tls.pem
+              value: /certs/tls.crt
             - name: SERVER_KEY
-              value: /certs/tls-key.pem
+              value: /certs/tls.key
             - name: ADD_NGINX_LOCATION_CFG
               value: 'proxy_read_timeout 99999s; proxy_connect_timeout 60s;'
             - name: ADD_NGINX_SERVER_CFG
@@ -127,7 +74,6 @@ spec:
           ports:
             - name: https
               containerPort: 10443
-
         - name: pttg-ip-hmrc-access-code
           image: quay.io/ukhomeofficedigital/pttg-ip-hmrc-access-code:{{.VERSION}}
           securityContext:
@@ -138,7 +84,9 @@ spec:
                  - SETGID
           env:
             - name: JAVA_OPTS
-              value: "-Xms150m -Xmx250m -Djavax.net.ssl.trustStore=/etc/keystore/truststore.jks"
+              value: "-Xms150m -Xmx250m"
+            - name: ACP_MODE
+              value: "true"
             - name: SERVER_PORT
               value: '8080'
             - name: ENDPOINTS_INFO_ENABLED
@@ -277,19 +225,22 @@ spec:
             timeoutSeconds: 5
           imagePullPolicy: Always
           volumeMounts:
-            - mountPath: /data
-              name: javapki
+            - name: javapki
+              mountPath: /data
               readOnly: true
-            - mountPath: /etc/keystore
-              name: keystore
+            - name: keystore
+              mountPath: /etc/keystore
+              readOnly: true
+            - name: bundle
+              mountPath: /certs
               readOnly: true
       volumes:
         - name: keystore
           emptyDir:
             medium: "Memory"
         - name: certs
-          emptyDir:
-            medium: "Memory"
+          secret:
+            secretName: {{ .DEPLOYMENT_NAME }}-service-tls-cmio
         - name: bundle
           configMap:
             name: bundle
