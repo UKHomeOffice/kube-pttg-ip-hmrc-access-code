@@ -10,7 +10,7 @@ spec:
   issuerRef:
     name: platform-ca
     kind: ClusterIssuer
-  commonName: app.{{ .KUBE_NAMESPACE }}.svc.cluster.local
+  commonName: {{ .DEPLOYMENT_NAME }}.{{ .KUBE_NAMESPACE }}.svc.cluster.local
   dnsNames:
-    - app
-    - app.{{ .KUBE_NAMESPACE }}.svc
+    - {{ .DEPLOYMENT_NAME }}
+    - {{ .DEPLOYMENT_NAME }}.{{ .KUBE_NAMESPACE }}.svc
