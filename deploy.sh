@@ -5,8 +5,10 @@ export KUBE_SERVER=${KUBE_SERVER}
 export DEPLOYMENT_NAME=${DEPLOYMENT_NAME:-pttg-ip-hmrc-access-code}
 
 if [[ -z ${IMAGE_VERSION} ]] ; then
-    export VERSION=build-${DRONE_BUILD_NUMBER}
+    echo "promoting build [build-${DRONE_BUILD_PARENT}] (the image built in the promoted job)"
+    export VERSION=build-${DRONE_BUILD_PARENT}
 else
+    echo "promoting build [IMAGE_VERSION] (specified in the 'drone build promote' command)"
     export VERSION=${IMAGE_VERSION}
 fi
 
