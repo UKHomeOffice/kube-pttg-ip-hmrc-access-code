@@ -4,7 +4,16 @@ export KUBE_NAMESPACE=${KUBE_NAMESPACE}
 export KUBE_SERVER=${KUBE_SERVER}
 export DEPLOYMENT_NAME=${DEPLOYMENT_NAME:-pttg-ip-hmrc-access-code}
 
-if [[ -z ${VERSION} ]] ; then
+echo
+echo "The whole env of deploy.sh is:"
+env
+echo
+echo "====================================="
+echo
+
+if [[ -z ${IMAGE_VERSION} ]] ; then
+    export VERSION=${DRONE_BUILD_NUMBER}
+else
     export VERSION=${IMAGE_VERSION}
 fi
 
